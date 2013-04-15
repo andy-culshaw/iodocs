@@ -499,27 +499,59 @@ function processRequest(req, res, next) {
 
         // Add API Key to params, if any.
         if (apiKey != '' && apiKey != 'undefined' && apiKey != undefined) {
+            if (apiConfig.keyHeader)
+            {
+                if(options.headers === void 0){
+                    options.headers = {};
+                }
+                options.headers[apiConfig.keyHeader] = apiKey;
+            }
+            else
+            {
+                if (options.path.indexOf('?') !== -1) {
+                    options.path += '&';
+                }
+                else {
+                    options.path += '?';
+                }
+                options.path += apiConfig.keyParam + '=' + apiKey;
+            }
+        }
+
+        // Perform signature routine, if any.
+        if (apiConfig.signature) {
             if (options.path.indexOf('?') !== -1) {
                 options.path += '&';
             }
             else {
                 options.path += '?';
             }
-            options.path += apiConfig.keyParam + '=' + apiKey;
-        }
-
-        // Perform signature routine, if any.
-        if (apiConfig.signature) {
+            var sig = null;
             if (apiConfig.signature.type == 'signed_md5') {
                 // Add signature parameter
                 var timeStamp = Math.round(new Date().getTime()/1000);
-                var sig = crypto.createHash('md5').update('' + apiKey + apiSecret + timeStamp + '').digest(apiConfig.signature.digest);
-                options.path += '&' + apiConfig.signature.sigParam + '=' + sig;
+                sig = crypto.createHash('md5').update('' + apiKey + apiSecret + timeStamp + '').digest(apiConfig.signature.digest);
             }
             else if (apiConfig.signature.type == 'signed_sha256') { // sha256(key+secret+epoch)
                 // Add signature parameter
                 var timeStamp = Math.round(new Date().getTime()/1000);
-                var sig = crypto.createHash('sha256').update('' + apiKey + apiSecret + timeStamp + '').digest(apiConfig.signature.digest);
+                sig = crypto.createHash('sha256').update('' + apiKey + apiSecret + timeStamp + '').digest(apiConfig.signature.digest);
+            }
+            if (apiConfig.signature.sigHeader)
+            {
+                if(options.headers === void 0){
+                    options.headers = {};
+                }
+                options.headers[apiConfig.signature.sigHeader] = sig;
+            }
+            else
+            {
+                if (options.path.indexOf('?') !== -1) {
+                    options.path += '&';
+                }
+                else {
+                    options.path += '?';
+                }
                 options.path += '&' + apiConfig.signature.sigParam + '=' + sig;
             }
         }
